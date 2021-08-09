@@ -1,10 +1,11 @@
 name: Build-Release-Images
+
 on:
   push:
     tags:
-      - 'v*'
-      - 'snapshot*'
-  workflow_dispatch: {}
+      - 'v*.*.*'
+  workflow_dispatch:
+
 jobs:
   build-release-images:
     name: Build and Release Firmware Images
@@ -17,8 +18,6 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          body: "Automated release. Please see the project README.md for more information."
-          prerelease: True
           files: |
             openwrt-imagebuilder-*/bin/targets/*/*/openwrt-*.bin
             openwrt-imagebuilder-*/bin/targets/*/*/openwrt-*.manifest

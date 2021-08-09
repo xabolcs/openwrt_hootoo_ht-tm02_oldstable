@@ -1,0 +1,174 @@
+From dbe32213f3c49af9369971429465e69b465c47c9 Mon Sep 17 00:00:00 2001
+From: Szabolcs Hubai <szab.hu@gmail.com>
+Date: Sun, 22 Aug 2021 15:53:05 +0200
+Subject: [PATCH 1/2] ramips: fix HooToo HT-TM02 partitions
+
+to avoid overwriting unique stock partitions.
+Due to this, sysupgrade.bin recipe have to be changed,
+and the upgrade scripts also, as there are now partitions kernel
+and rootfs instead firmware.
+
+While at it, limit kernel and rootfs sizes:
+- kernel to 1.5M to avoid boot loop (LZMA ERROR 1)
+- rootfs to 6M to avoid hard bricked devices due to overflowing TFTP recovery
+---
+ .../ramips/base-files/lib/upgrade/platform.sh | 61 +++++++++++++++++++
+ target/linux/ramips/dts/HT-TM02.dts           | 30 +++++++--
+ target/linux/ramips/image/rt305x.mk           |  6 ++
+ 3 files changed, 93 insertions(+), 4 deletions(-)
+
+diff --git a/target/linux/ramips/base-files/lib/upgrade/platform.sh b/target/linux/ramips/base-files/lib/upgrade/platform.sh
+index 3b967aac87..4fdf365db7 100755
+--- a/target/linux/ramips/base-files/lib/upgrade/platform.sh
++++ b/target/linux/ramips/base-files/lib/upgrade/platform.sh
+@@ -8,7 +8,51 @@ REQUIRE_IMAGE_METADATA=1
+ RAMFS_COPY_BIN='fw_printenv fw_setenv'
+ RAMFS_COPY_DATA='/etc/fw_env.config /var/lock/fw_printenv.lock'
+ 
++platform_find_partitions() {
++	local first dev size erasesize name
++	while read dev size erasesize name; do
++		name=${name#'"'}; name=${name%'"'}
++		case "$name" in
++			kernel|params|rootfs)
++				if [ -z "$first" ]; then
++					first="$name"
++				else
++					echo "$erasesize:$first:$name"
++					break
++				fi
++			;;
++		esac
++	done < /proc/mtd
++}
++
++platform_find_part() {
++	local part
++	for part in "${1%:*}" "${1#*:}"; do
++		[ "$part" = "$2" ] && echo "$part" && break
++	done
++}
++
+ platform_check_image() {
++	case "$(board_name)" in
++	ht-tm02)
++		local partitions=$(platform_find_partitions)
++		local params=$(platform_find_part "$partitions" params)
++
++		[ -n "$params" ] || return 0
++
++		cat << EOF
++The "params" partitions is not present.
++Probably you are using wingspinner's image.
++
++You need to roll back to vendor firmware + U-Boot first!
++After that you should install OpenWrt through
++"kernel" + "rootfs" TFTP recovery!
++
++Once this is done. Retry.
++EOF
++		return 1
++		;;
++	esac
+ 	return 0
+ }
+ 
+@@ -35,6 +79,21 @@ platform_nand_pre_upgrade() {
+ 	esac
+ }
+ 
++hootoo_do_upgrade() {
++	local tar_file="$1"
++
++	local board_dir=$(tar tf $tar_file | grep -m 1 '^sysupgrade-.*/$')
++	board_dir=${board_dir%/}
++
++	tar Oxf $tar_file ${board_dir}/kernel | mtd write - kernel
++
++	if [ -n "$UPGRADE_BACKUP" ]; then
++		tar Oxf $tar_file ${board_dir}/root | mtd -j "$UPGRADE_BACKUP" write - rootfs
++	else
++		tar Oxf $tar_file ${board_dir}/root | mtd write - rootfs
++	fi
++}
++
+ platform_do_upgrade() {
+ 	local board=$(board_name)
+ 
+@@ -64,6 +123,8 @@ platform_do_upgrade() {
+ 	xiaomi,mir3p)
+ 		nand_do_upgrade "$1"
+ 		;;
++	ht-tm02)
++		hootoo_do_upgrade "$1"
+ 	tplink,c50-v4)
+ 		MTD_ARGS="-t romfile"
+ 		default_do_upgrade "$1"
+diff --git a/target/linux/ramips/dts/HT-TM02.dts b/target/linux/ramips/dts/HT-TM02.dts
+index 4e73c6988d..7eb7fbaccc 100644
+--- a/target/linux/ramips/dts/HT-TM02.dts
++++ b/target/linux/ramips/dts/HT-TM02.dts
+@@ -73,7 +73,7 @@
+ 			};
+ 
+ 			partition@30000 {
+-				label = "u-boot-env";
++				label = "config";
+ 				reg = <0x30000 0x10000>;
+ 				read-only;
+ 			};
+@@ -85,9 +85,31 @@
+ 			};
+ 
+ 			partition@50000 {
+-				compatible = "denx,uimage";
+-				label = "firmware";
+-				reg = <0x50000 0x7b0000>;
++				label = "kernel";
++				reg = <0x50000 0x180000>;
++			};
++
++			partition@1d0000 {
++				label = "params";
++				reg = <0x1d0000 0x10000>;
++				read-only;
++			};
++
++			partition@1e0000 {
++				label = "userbackup";
++				reg = <0x1e0000 0x10000>;
++				read-only;
++			};
++
++			partition@1f0000 {
++				label = "user";
++				reg = <0x1f0000 0x10000>;
++				read-only;
++			};
++
++			partition@200000 {
++				label = "rootfs";
++				reg = <0x200000 0x600000>;
+ 			};
+ 		};
+ 	};
+diff --git a/target/linux/ramips/image/rt305x.mk b/target/linux/ramips/image/rt305x.mk
+index 59f0cbdee6..a62eafec4c 100644
+--- a/target/linux/ramips/image/rt305x.mk
++++ b/target/linux/ramips/image/rt305x.mk
+@@ -382,6 +382,12 @@ define Device/ht-tm02
+   DTS := HT-TM02
+   DEVICE_TITLE := HooToo HT-TM02
+   DEVICE_PACKAGES := kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-usb-ledtrig-usbport
++  IMAGE_SIZE := 6144k
++  KERNEL_SIZE := 1536k
++  IMAGES += kernel.bin rootfs.bin
++  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
++  IMAGE/kernel.bin := append-kernel | check-size $$$$(KERNEL_SIZE)
++  IMAGE/rootfs.bin := append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
+ endef
+ TARGET_DEVICES += ht-tm02
+ 
+-- 
+2.25.1
+
