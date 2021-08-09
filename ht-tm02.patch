@@ -1,0 +1,80 @@
+From 44976568a4401af7fdb42833cccf6fbe66fc9807 Mon Sep 17 00:00:00 2001
+From: Szabolcs Hubai <szab.hu@gmail.com>
+Date: Tue, 16 Mar 2021 23:40:27 +0100
+Subject: [PATCH] ramips: fix HooToo HT-TM02 partitions
+
+to avoid overwriting unique stock partitions.
+
+Limit kernel to 1.5M to avoid boot loop (LZMA ERROR 1).
+---
+ target/linux/ramips/dts/HT-TM02.dts | 30 +++++++++++++++++++++++++----
+ target/linux/ramips/image/rt305x.mk |  5 +++++
+ 2 files changed, 31 insertions(+), 4 deletions(-)
+
+diff --git a/target/linux/ramips/dts/HT-TM02.dts b/target/linux/ramips/dts/HT-TM02.dts
+index 4e73c6988d..7eb7fbaccc 100644
+--- a/target/linux/ramips/dts/HT-TM02.dts
++++ b/target/linux/ramips/dts/HT-TM02.dts
+@@ -73,7 +73,7 @@
+ 			};
+ 
+ 			partition@30000 {
+-				label = "u-boot-env";
++				label = "config";
+ 				reg = <0x30000 0x10000>;
+ 				read-only;
+ 			};
+@@ -85,9 +85,31 @@
+ 			};
+ 
+ 			partition@50000 {
+-				compatible = "denx,uimage";
+-				label = "firmware";
+-				reg = <0x50000 0x7b0000>;
++				label = "kernel";
++				reg = <0x50000 0x180000>;
++			};
++
++			partition@1d0000 {
++				label = "params";
++				reg = <0x1d0000 0x10000>;
++				read-only;
++			};
++
++			partition@1e0000 {
++				label = "userbackup";
++				reg = <0x1e0000 0x10000>;
++				read-only;
++			};
++
++			partition@1f0000 {
++				label = "user";
++				reg = <0x1f0000 0x10000>;
++				read-only;
++			};
++
++			partition@200000 {
++				label = "rootfs";
++				reg = <0x200000 0x600000>;
+ 			};
+ 		};
+ 	};
+diff --git a/target/linux/ramips/image/rt305x.mk b/target/linux/ramips/image/rt305x.mk
+index 59f0cbdee6..b33c3afc11 100644
+--- a/target/linux/ramips/image/rt305x.mk
++++ b/target/linux/ramips/image/rt305x.mk
+@@ -382,6 +382,11 @@ define Device/ht-tm02
+   DTS := HT-TM02
+   DEVICE_TITLE := HooToo HT-TM02
+   DEVICE_PACKAGES := kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-usb-ledtrig-usbport
++  IMAGE_SIZE := 6144k
++  KERNEL_SIZE := 1536k
++  IMAGES += kernel.bin rootfs.bin
++  IMAGE/kernel.bin := append-kernel | check-size $$$$(KERNEL_SIZE)
++  IMAGE/rootfs.bin := append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
+ endef
+ TARGET_DEVICES += ht-tm02
+ 
+-- 
+2.17.1
+
