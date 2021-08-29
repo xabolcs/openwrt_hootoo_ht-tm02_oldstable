@@ -1,0 +1,433 @@
+From 07cbfbccd5160f29e90d08f4cd02b764b2c574e1 Mon Sep 17 00:00:00 2001
+From: Szabolcs Hubai <szab.hu@gmail.com>
+Date: Fri, 13 Aug 2021 08:48:40 +0200
+Subject: [PATCH 2/2] ramips: add HooToo Tripmate HT-TM01
+
+as a HT-TM02 clone ;)
+- it doesn't have a mode switch
+- it does have a battery and an i2c
+---
+ .../ramips/base-files/etc/board.d/01_leds     |   3 +
+ .../ramips/base-files/etc/board.d/02_network  |   1 +
+ target/linux/ramips/base-files/lib/ramips.sh  |   3 +
+ .../ramips/base-files/lib/upgrade/platform.sh |   7 +-
+ target/linux/ramips/dts/HT-TM01.dts           |  40 ++++++
+ target/linux/ramips/dts/HT-TM02.dts           | 120 +-----------------
+ .../ramips/dts/rt5350_sunvalley_tripmate.dtsi | 115 +++++++++++++++++
+ target/linux/ramips/image/rt305x.mk           |  18 ++-
+ 8 files changed, 189 insertions(+), 118 deletions(-)
+ create mode 100644 target/linux/ramips/dts/HT-TM01.dts
+ create mode 100644 target/linux/ramips/dts/rt5350_sunvalley_tripmate.dtsi
+
+diff --git a/target/linux/ramips/base-files/etc/board.d/01_leds b/target/linux/ramips/base-files/etc/board.d/01_leds
+index 5c005db0c1..bbc08c79b3 100755
+--- a/target/linux/ramips/base-files/etc/board.d/01_leds
++++ b/target/linux/ramips/base-files/etc/board.d/01_leds
+@@ -208,6 +208,9 @@ hpm)
+ 	ucidef_set_led_netdev "eth" "ETH" "$boardname:green:eth" "eth0"
+ 	set_wifi_led "$boardname:green:wifi"
+ 	;;
++ht-tm01)
++	ucidef_set_led_netdev "eth" "Ethernet" "$boardname:blue:lan" "eth0"
++	set_wifi_led "$boardname:green:wlan"
+ ht-tm02)
+ 	ucidef_set_led_netdev "eth" "Ethernet" "$boardname:green:lan" "eth0"
+ 	set_wifi_led "$boardname:blue:wlan"
+diff --git a/target/linux/ramips/base-files/etc/board.d/02_network b/target/linux/ramips/base-files/etc/board.d/02_network
+index 8ca1831afe..a86e7d2047 100755
+--- a/target/linux/ramips/base-files/etc/board.d/02_network
++++ b/target/linux/ramips/base-files/etc/board.d/02_network
+@@ -50,6 +50,7 @@ ramips_setup_interfaces()
+ 	broadway|\
+ 	dcs-930|\
+ 	dcs-930l-b1|\
++	ht-tm01|\
+ 	ht-tm02|\
+ 	kimax,u35wf|\
+ 	linkits7688 | \
+diff --git a/target/linux/ramips/base-files/lib/ramips.sh b/target/linux/ramips/base-files/lib/ramips.sh
+index 093303892c..c2fc539ff4 100755
+--- a/target/linux/ramips/base-files/lib/ramips.sh
++++ b/target/linux/ramips/base-files/lib/ramips.sh
+@@ -238,6 +238,9 @@ ramips_board_detect() {
+ 	*"HPM")
+ 		name="hpm"
+ 		;;
++	*"HT-TM01")
++		name="ht-tm01"
++		;;
+ 	*"HT-TM02")
+ 		name="ht-tm02"
+ 		;;
+diff --git a/target/linux/ramips/base-files/lib/upgrade/platform.sh b/target/linux/ramips/base-files/lib/upgrade/platform.sh
+index 4fdf365db7..d4b7d2ae9e 100755
+--- a/target/linux/ramips/base-files/lib/upgrade/platform.sh
++++ b/target/linux/ramips/base-files/lib/upgrade/platform.sh
+@@ -34,7 +34,8 @@ platform_find_part() {
+ 
+ platform_check_image() {
+ 	case "$(board_name)" in
+-	ht-tm02)
++	hootoo,ht-tm01|\
++	hootoo,ht-tm02)
+ 		local partitions=$(platform_find_partitions)
+ 		local params=$(platform_find_part "$partitions" params)
+ 
+@@ -123,8 +124,10 @@ platform_do_upgrade() {
+ 	xiaomi,mir3p)
+ 		nand_do_upgrade "$1"
+ 		;;
+-	ht-tm02)
++	hootoo,ht-tm01|\
++	hootoo,ht-tm02)
+ 		hootoo_do_upgrade "$1"
++		;;
+ 	tplink,c50-v4)
+ 		MTD_ARGS="-t romfile"
+ 		default_do_upgrade "$1"
+diff --git a/target/linux/ramips/dts/HT-TM01.dts b/target/linux/ramips/dts/HT-TM01.dts
+new file mode 100644
+index 0000000000..fca5a5d061
+--- /dev/null
++++ b/target/linux/ramips/dts/HT-TM01.dts
+@@ -0,0 +1,40 @@
++#include "rt5350_sunvalley_tripmate.dtsi"
++
++/ {
++	compatible = "hootoo,ht-tm01", "ralink,rt5350-soc";
++	model = "HooToo HT-TM01";
++
++	aliases {
++		led-boot = &led_wlan;
++		led-failsafe = &led_wlan;
++		led-running = &led_wlan;
++		led-upgrade = &led_wlan;
++	};
++
++	leds {
++		compatible = "gpio-leds";
++
++		led_wlan: wlan {
++			label = "ht-tm01:blue:wlan";
++			gpios = <&gpio0 7 GPIO_ACTIVE_LOW>;
++		};
++
++		lan {
++			label = "ht-tm01:green:lan";
++			gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
++		};
++	};
++};
++
++&gpio0 {
++	status = "okay";
++};
++
++&i2c {
++	status = "okay";
++};
++
++&sunvalley_gpio {
++	ralink,group = "jtag", "uartf";
++	ralink,function = "gpio";
++};
+diff --git a/target/linux/ramips/dts/HT-TM02.dts b/target/linux/ramips/dts/HT-TM02.dts
+index 7eb7fbaccc..5038691db8 100644
+--- a/target/linux/ramips/dts/HT-TM02.dts
++++ b/target/linux/ramips/dts/HT-TM02.dts
+@@ -1,9 +1,4 @@
+-/dts-v1/;
+-
+-#include "rt5350.dtsi"
+-
+-#include <dt-bindings/gpio/gpio.h>
+-#include <dt-bindings/input/input.h>
++#include "rt5350_sunvalley_tripmate.dtsi"
+ 
+ / {
+ 	compatible = "hootoo,ht-tm02", "ralink,rt5350-soc";
+@@ -29,118 +24,17 @@
+ 			gpios = <&gpio0 12 GPIO_ACTIVE_LOW>;
+ 		};
+ 	};
+-
+-	keys {
+-		compatible = "gpio-keys-polled";
+-		poll-interval = <20>;
+-
+-		reset {
+-			label = "reset";
+-			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
+-			linux,code = <KEY_RESTART>;
+-		};
+-
+-		modeswitch {
+-			label = "modeswitch";
+-			gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
+-			linux,code = <BTN_0>;
+-			linux,input-type = <EV_SW>;
+-		};
+-	};
+ };
+ 
+ &gpio0 {
+ 	status = "okay";
+ };
+ 
+-&spi0 {
+-	status = "okay";
+-
+-	m25p80@0 {
+-		compatible = "jedec,spi-nor";
+-		reg = <0>;
+-		spi-max-frequency = <10000000>;
+-
+-		partitions {
+-			compatible = "fixed-partitions";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-
+-			partition@0 {
+-				label = "u-boot";
+-				reg = <0x0 0x30000>;
+-				read-only;
+-			};
+-
+-			partition@30000 {
+-				label = "config";
+-				reg = <0x30000 0x10000>;
+-				read-only;
+-			};
+-
+-			factory: partition@40000 {
+-				label = "factory";
+-				reg = <0x40000 0x10000>;
+-				read-only;
+-			};
+-
+-			partition@50000 {
+-				label = "kernel";
+-				reg = <0x50000 0x180000>;
+-			};
+-
+-			partition@1d0000 {
+-				label = "params";
+-				reg = <0x1d0000 0x10000>;
+-				read-only;
+-			};
+-
+-			partition@1e0000 {
+-				label = "userbackup";
+-				reg = <0x1e0000 0x10000>;
+-				read-only;
+-			};
+-
+-			partition@1f0000 {
+-				label = "user";
+-				reg = <0x1f0000 0x10000>;
+-				read-only;
+-			};
+-
+-			partition@200000 {
+-				label = "rootfs";
+-				reg = <0x200000 0x600000>;
+-			};
+-		};
+-	};
+-};
+-
+-&pinctrl {
+-	state_default: pinctrl0 {
+-		gpio {
+-			ralink,group = "i2c", "jtag", "uartf";
+-			ralink,function = "gpio";
+-		};
++&sunvalley_keys {
++	modeswitch {
++		label = "modeswitch";
++		gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
++		linux,code = <BTN_0>;
++		linux,input-type = <EV_SW>;
+ 	};
+ };
+-
+-&ethernet {
+-	mtd-mac-address = <&factory 0x28>;
+-};
+-
+-&esw {
+-	mediatek,portmap = <0x10>;
+-	mediatek,portdisable = <0x2f>;
+-};
+-
+-&wmac {
+-	ralink,mtd-eeprom = <&factory 0>;
+-};
+-
+-&ehci {
+-	status = "okay";
+-};
+-
+-&ohci {
+-	status = "okay";
+-};
+diff --git a/target/linux/ramips/dts/rt5350_sunvalley_tripmate.dtsi b/target/linux/ramips/dts/rt5350_sunvalley_tripmate.dtsi
+new file mode 100644
+index 0000000000..8c2c0d56dd
+--- /dev/null
++++ b/target/linux/ramips/dts/rt5350_sunvalley_tripmate.dtsi
+@@ -0,0 +1,115 @@
++/dts-v1/;
++
++#include "rt5350.dtsi"
++
++#include <dt-bindings/gpio/gpio.h>
++#include <dt-bindings/input/input.h>
++
++/ {
++	sunvalley_keys: keys {
++		compatible = "gpio-keys-polled";
++		poll-interval = <20>;
++
++		reset {
++			label = "reset";
++			gpios = <&gpio0 10 GPIO_ACTIVE_LOW>;
++			linux,code = <KEY_RESTART>;
++		};
++	};
++};
++
++&gpio0 {
++	status = "okay";
++};
++
++&spi0 {
++	status = "okay";
++
++	m25p80@0 {
++		compatible = "jedec,spi-nor";
++		reg = <0>;
++		spi-max-frequency = <10000000>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "u-boot";
++				reg = <0x0 0x30000>;
++				read-only;
++			};
++
++			partition@30000 {
++				label = "config";
++				reg = <0x30000 0x10000>;
++				read-only;
++			};
++
++			factory: partition@40000 {
++				label = "factory";
++				reg = <0x40000 0x10000>;
++				read-only;
++			};
++
++			partition@50000 {
++				label = "kernel";
++				reg = <0x50000 0x180000>;
++			};
++
++			partition@1d0000 {
++				label = "params";
++				reg = <0x1d0000 0x10000>;
++				read-only;
++			};
++
++			partition@1e0000 {
++				label = "userbackup";
++				reg = <0x1e0000 0x10000>;
++				read-only;
++			};
++
++			partition@1f0000 {
++				label = "user";
++				reg = <0x1f0000 0x10000>;
++				read-only;
++			};
++
++			partition@200000 {
++				label = "rootfs";
++				reg = <0x200000 0x600000>;
++			};
++		};
++	};
++};
++
++&pinctrl {
++	state_default: pinctrl0 {
++		sunvalley_gpio: gpio {
++			ralink,group = "i2c", "jtag", "uartf";
++			ralink,function = "gpio";
++		};
++	};
++};
++
++&ethernet {
++	mtd-mac-address = <&factory 0x28>;
++};
++
++&esw {
++	mediatek,portmap = <0x10>;
++	mediatek,portdisable = <0x2f>;
++};
++
++&wmac {
++	ralink,mtd-eeprom = <&factory 0>;
++};
++
++&ehci {
++	status = "okay";
++};
++
++&ohci {
++	status = "okay";
++};
+diff --git a/target/linux/ramips/image/rt305x.mk b/target/linux/ramips/image/rt305x.mk
+index a62eafec4c..3b37ab89aa 100644
+--- a/target/linux/ramips/image/rt305x.mk
++++ b/target/linux/ramips/image/rt305x.mk
+@@ -378,9 +378,7 @@ define Device/hlk-rm04
+ endef
+ TARGET_DEVICES += hlk-rm04
+ 
+-define Device/ht-tm02
+-  DTS := HT-TM02
+-  DEVICE_TITLE := HooToo HT-TM02
++define Device/sunvalley_tripmate_common
+   DEVICE_PACKAGES := kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-usb-ledtrig-usbport
+   IMAGE_SIZE := 6144k
+   KERNEL_SIZE := 1536k
+@@ -389,6 +387,20 @@ define Device/ht-tm02
+   IMAGE/kernel.bin := append-kernel | check-size $$$$(KERNEL_SIZE)
+   IMAGE/rootfs.bin := append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
+ endef
++
++define Device/ht-tm01
++  $(Device/sunvalley_tripmate_common)
++  DTS := HT-TM01
++  DEVICE_TITLE := HooToo HT-TM01
++  DEVICE_PACKAGES += kmod-i2c-ralink
++endef
++TARGET_DEVICES += ht-tm01
++
++define Device/ht-tm02
++  $(Device/sunvalley_tripmate_common)
++  DTS := HT-TM02
++  DEVICE_TITLE := HooToo HT-TM02
++endef
+ TARGET_DEVICES += ht-tm02
+ 
+ define Device/hw550-3g
+-- 
+2.25.1
+
