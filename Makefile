@@ -68,6 +68,7 @@ images: $(BUILDER) linux-sources
 	cd $(BUILDER) && $(foreach PROFILE,$(PROFILES),\
 	    make image PROFILE="$(PROFILE)" EXTRA_IMAGE_NAME="$(EXTRA_IMAGE_NAME)" PACKAGES="$(PACKAGES)" FILES="$(TOPDIR)/target/linux/$(BOARD)/$(SUBTARGET)/base-files/"\
 	;)
+	sleep 5
 	cat $(BUILDER)/bin/targets/$(BOARD)/$(SUBTARGET)/sha256sums
 	ls -hs $(BUILDER)/bin/targets/$(BOARD)/$(SUBTARGET)/openwrt-*.bin
 
