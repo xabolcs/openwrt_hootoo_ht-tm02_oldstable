@@ -1,0 +1,253 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Szabolcs Hubai <szab.hu@gmail.com>
+Date: Sun, 16 Oct 2022 22:02:03 +0200
+Subject: [PATCH] ramips: fix partitions for HooToo HT-TM02
+
+to avoid overwriting unique stock partitions.
+Due to this, sysupgrade.bin recipe have to be changed,
+and the upgrade scripts also, as there are now partitions kernel
+and rootfs instead firmware.
+
+While at it, limit kernel and rootfs sizes:
+- kernel to 1.5M to avoid boot loop (LZMA ERROR 1)
+- rootfs to 6M to avoid hard bricked devices due to overflowing TFTP recovery
+
+The improvements here also address the "misplaced" U-Boot environment
+partition, which is located between the kernel and rootfs in the stock
+image / implementation. This is addressed by making use of mtd-concat,
+maximizing space available in the booted image.
+This will make sysupgrade from earlier versions impossible.
+
+Changes are based on RAVPower RP-WD03 partition fix commit 07aa858a73e6,
+as the hardware is almost identical (except for RAM size) and
+is from the same vendor (SunValley). While at it, also change
+the SPI frequency accordingly.
+
+Installation:
+
+ - Download the needed OpenWrt install files, place them in the root
+   of a clean TFTP server running on your computer. Rename the files as,
+   - openwrt-ramips-rt305x-hootoo_ht-tm02-squashfs-kernel.bin => kernel
+   - openwrt-ramips-rt305x-hootoo_ht-tm02-squashfs-rootfs.bin => rootfs
+ - Plug the router into your computer via Ethernet
+ - Set your computer to use 10.10.10.254 as its IP address
+ - With your router shut down, hold down the power button until the first
+   white LED lights up.
+ - Push and hold the reset button and release the power button. Continue
+   holding the reset button for 30 seconds or until it begins searching
+   for files on your TFTP server, whichever comes first.
+ - The router (10.10.10.128) will look for your computer at 10.10.10.254
+   and install the two files. Once it has finished installation, it will
+   automatically reboot and start up OpenWrt.
+ - Set your computer to use DHCP for its IP address
+
+Notes:
+
+ - U-Boot environment can be modified, u-boot-env is preserved on initial
+   install or sysupgrade
+ - mtd-concat functionality is included, to extend rootfs partition by
+   "appending" the OEM user and userbackup partitions to rootfs
+
+Most of the changes in this commit are the work of Russell Morris and
+Adrian Schmutzler (as credited below), I just backported to HT-TM02.
+
+Suggested-by: Russell Morris <rmorris@rkmorris.us>
+Suggested-by: Adrian Schmutzler <freifunk@adrianschmutzler.de>
+Signed-off-by: Szabolcs Hubai <szab.hu@gmail.com>
+---
+ package/boot/uboot-envtools/files/ramips      |  1 +
+ .../ramips/dts/rt5350_hootoo_ht-tm02.dts      | 45 ++++++++++++++++---
+ target/linux/ramips/image/rt305x.mk           | 11 ++++-
+ .../etc/uci-defaults/05_fix-compat-version    | 10 +++++
+ .../rt305x/base-files/lib/upgrade/platform.sh | 36 +++++++++++++++
+ 5 files changed, 96 insertions(+), 7 deletions(-)
+ create mode 100644 target/linux/ramips/rt305x/base-files/etc/uci-defaults/05_fix-compat-version
+
+diff --git a/package/boot/uboot-envtools/files/ramips b/package/boot/uboot-envtools/files/ramips
+index 3e358ec6ac..f295580bae 100644
+--- a/package/boot/uboot-envtools/files/ramips
++++ b/package/boot/uboot-envtools/files/ramips
+@@ -44,6 +44,7 @@ zbtlink,zbt-wg2626|\
+ zte,mf283plus)
+ 	ubootenv_add_uci_config "/dev/mtd1" "0x0" "0x1000" "0x10000"
+ 	;;
++hootoo,ht-tm02|\
+ hootoo,ht-tm05|\
+ ravpower,rp-wd03)
+ 	idx="$(find_mtd_index u-boot-env)"
+diff --git a/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts b/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
+index 543fda74b7..36503860ab 100644
+--- a/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
++++ b/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
+@@ -4,7 +4,7 @@
+ #include <dt-bindings/input/input.h>
+ 
+ / {
+-	compatible = "hootoo,ht-tm02", "ralink,rt5350-soc";
++	compatible = "hootoo,ht-tm02-stock", "ralink,rt5350-soc";
+ 	model = "HooToo HT-TM02";
+ 
+ 	aliases {
+@@ -45,6 +45,23 @@
+ 			linux,input-type = <EV_SW>;
+ 		};
+ 	};
++
++	virtual_flash {
++		compatible = "mtd-concat";
++
++		devices = <&rootfs1 &rootfs2>;
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "rootfs";
++				reg = <0x0 0x0>;
++			};
++		};
++	};
+ };
+ 
+ &spi0 {
+@@ -53,7 +70,7 @@
+ 	flash@0 {
+ 		compatible = "jedec,spi-nor";
+ 		reg = <0>;
+-		spi-max-frequency = <10000000>;
++		spi-max-frequency = <50000000>;
+ 
+ 		partitions {
+ 			compatible = "fixed-partitions";
+@@ -67,7 +84,7 @@
+ 			};
+ 
+ 			partition@30000 {
+-				label = "u-boot-env";
++				label = "config";
+ 				reg = <0x30000 0x10000>;
+ 				read-only;
+ 			};
+@@ -79,9 +96,25 @@
+ 			};
+ 
+ 			partition@50000 {
+-				compatible = "denx,uimage";
+-				label = "firmware";
+-				reg = <0x50000 0x7b0000>;
++				label = "kernel";
++				reg = <0x50000 0x180000>;
++			};
++
++			partition@1d0000 {
++				label = "u-boot-env";
++				reg = <0x1d0000 0x10000>;
++				read-only;
++			};
++
++			rootfs2: partition@1e0000 {
++				label = "rootfs2";
++				reg = <0x1e0000 0x20000>;
++				read-only;
++			};
++
++			rootfs1: partition@200000 {
++				label = "rootfs1";
++				reg = <0x200000 0x600000>;
+ 			};
+ 		};
+ 	};
+diff --git a/target/linux/ramips/image/rt305x.mk b/target/linux/ramips/image/rt305x.mk
+index 9b498fa5ab..0f174faf04 100644
+--- a/target/linux/ramips/image/rt305x.mk
++++ b/target/linux/ramips/image/rt305x.mk
+@@ -600,7 +600,16 @@ define Device/hootoo_ht-tm02
+   DEVICE_VENDOR := HooToo
+   DEVICE_MODEL := HT-TM02
+   DEVICE_PACKAGES := kmod-usb-ohci kmod-usb2 kmod-usb-ledtrig-usbport
+-  SUPPORTED_DEVICES += ht-tm02
++  SUPPORTED_DEVICES += hootoo,ht-tm02-stock
++  IMAGE_SIZE := 6144k
++  KERNEL_SIZE := 1536k
++  IMAGES += kernel.bin rootfs.bin
++  IMAGE/sysupgrade.bin := sysupgrade-tar | append-metadata
++  IMAGE/kernel.bin := append-kernel | check-size $$$$(KERNEL_SIZE)
++  IMAGE/rootfs.bin := append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
++  DEVICE_COMPAT_VERSION := 2.0
++  DEVICE_COMPAT_MESSAGE := Partition design has changed compared to older versions (up to 19.07) due to kernel size restrictions. \
++	Upgrade via sysupgrade mechanism is not possible, so new installation via TFTP is required.
+   DEFAULT := n
+ endef
+ TARGET_DEVICES += hootoo_ht-tm02
+diff --git a/target/linux/ramips/rt305x/base-files/etc/uci-defaults/05_fix-compat-version b/target/linux/ramips/rt305x/base-files/etc/uci-defaults/05_fix-compat-version
+new file mode 100644
+index 0000000000..3995a2731c
+--- /dev/null
++++ b/target/linux/ramips/rt305x/base-files/etc/uci-defaults/05_fix-compat-version
+@@ -0,0 +1,10 @@
++. /lib/functions.sh
++
++case "$(board_name)" in
++	hootoo,ht-tm02)
++		uci set system.@system[0].compat_version="2.0"
++		uci commit system
++		;;
++esac
++
++exit 0
+diff --git a/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh b/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
+index 786d57fc70..2138503823 100755
+--- a/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
++++ b/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
+@@ -6,13 +6,49 @@ PART_NAME=firmware
+ REQUIRE_IMAGE_METADATA=1
+ 
+ platform_check_image() {
++	case "$(board_name)" in
++	ht-tm02)
++		local config_size=$(mtd_get_part_size config)
++
++		[ -n "$config_size" ] || return 0
++
++		cat << EOF
++The "config" partitions is not present.
++Probably you are using wingspinner's image.
++You need to roll back to vendor firmware + U-Boot first!
++After that you should install OpenWrt through
++"kernel" + "rootfs" TFTP recovery!
++Once this is done, retry!
++EOF
++		return 1
++		;;
++	esac
+ 	return 0
+ }
+ 
++
++hootoo_do_upgrade() {
++	local tar_file="$1"
++
++	local board_dir=$(tar tf $tar_file | grep -m 1 '^sysupgrade-.*/$')
++	board_dir=${board_dir%/}
++
++	tar Oxf $tar_file ${board_dir}/kernel | mtd write - kernel
++
++	if [ -n "$UPGRADE_BACKUP" ]; then
++		tar Oxf $tar_file ${board_dir}/root | mtd -j "$UPGRADE_BACKUP" write - rootfs
++	else
++		tar Oxf $tar_file ${board_dir}/root | mtd write - rootfs
++	fi
++}
++
++
+ platform_do_upgrade() {
+ 	local board=$(board_name)
+ 
+ 	case "$board" in
++	ht-tm02)
++		hootoo_do_upgrade "$1"
+ 	*)
+ 		default_do_upgrade "$1"
+ 		;;

@@ -1,48 +1,33 @@
 ## Overview
 
-This repository contains a simple patch to enable the [OpenWrt firmware for the TP-Link TL-WPA8630P v2](https://openwrt.org/toh/tp-link/tl-wpa8630p_v2) to be flashed to the following devices which are not officially supported.
+This repository contains a few simple patch to allow a few `ramips/rt305x` Sunvalleytek Tripmate devices to be flashed with **stock compatible flash layout** custom OpenWrt build.
 
 It builds the images using the [OpenWrt ImageBuilder](https://openwrt.org/docs/guide-user/additional-software/imagebuilder). One advantage of this over from-source custom builds is that the kernel is the same as the official builds, so all kmods from the standard repos are installable.
 
-The only difference between these firmwares and the offical firmwares is the extra model version in the firmware file's SupportList required to perform the upgrade. After installing, the device will be identical to the official OpenWrt image (i.e. `v2-int`, `v2.0-eu`, `v2.1-eu`). You can upgrade using the official sysupgrade firmwares matching the patched firmware. If you are reverting to stock later, make sure to use the exact same stock firmware version as you originally upgraded from. 
+The only difference between these firmwares and the offical HT-TM02 firmware is the [installation method](https://openwrt.org/toh/hootoo/ht-tm01_tripmate#installation): the firmwares in this repository need to be installed with TFTP recovery. 
+
+And because of this, you should never ever cross upgrade between official OpenWrt build and this custom build!
 
 
 ## Supported versions 
 
-| Hardware Version | Stock Firmware Version | Patched OpenWrt Firmware | Sysupgrade to official OpenWrt official image after install |
-| --- | --- | --- | --- |
-| `Model: TL-WPA8630(CA) Ver: 2.0` | All | `openwrt-patch-ath79-tiny-tplink_tl-wpa8630p-v2-int-squashfs-factory.bin` | `tplink_tl-wpa8630p-v2-int` |
-| `Model: TL-WPA8630(US) Ver: 2.0` | `2.0.1 Build 20171011 Rel.33916` | `openwrt-patch-ath79-tiny-tplink_tl-wpa8630p-v2-int-squashfs-factory.bin` | `tplink_tl-wpa8630p-v2-int` |
-| `Model: TL-WPA8630(EU) Ver: 2.0` | `2.0.2 Build 20171017 Rel.43480` | `openwrt-patch-ath79-tiny-tplink_tl-wpa8630p-v2.0-eu-squashfs-factory.bin` | `tplink_tl-wpa8630p-v2.0-eu` |
-
-**!!! ONLY INSTALL THESE FIRMWARES IF YOUR CURRENT HARDWARE AND FIRMWARE VERSIONS EXACTLY MATCHES THE ENTRY IN THIS TABLE !!!**
-
-If your device is running a different firmware version than those listed below, installing these firmwares will prevent your device from booting and turn it into a [brick](https://en.wikipedia.org/wiki/Brick_%28electronics%29). This is because the bootloader in the newer versions of the stock firmwares load the kernal and filesystem from a different memory location. It will not be recoverable without physically opening the device (which should not be attempted as it contains hazardous 110-230V voltages) and writing directly to the flash memory chip with a flash programmer. So only install this firmware on your device if its a complete match! For support for other versions, ask in the [OpenWrt forum](https://forum.openwrt.org/).
-
-Where to find this information:
-
-* Hardware Version 
-  * Where: On the barcode sticker on the back of the device.
-  * Example: `Model: TL-WPA8630P(EU) Ver: 2.0`
-* Firmware Version
-  * Where: In the Web UI of the device under "System Tools -> Firmware Upgrade"
-  * Example: `2.0.3 Build 20171018 Rel.36564`
+| Vendor | Model | Vendor Product Line | Stock firmware | Stock backup <small>from a random user</small> | OpenWrt Wiki device page |
+| --- | --- | --- | --- | --- | --- |
+| HooToo | HT-TM02 | `WiFiPort` | ... | [backup-fw-WiFiPort-HooToo-TM02-2.000.018-8850119415](https://drive.google.com/drive/folders/1PnhUEnPvaC5h0kxtm30y-SiWqHzyFvty?usp=sharing) | [HooToo HT-TM02 (TripMate Nano)](https://openwrt.org/toh/hootoo/tripmate-nano) |
 
 
 ## Download firmware
 
-See the [releases page](https://github.com/jwmullally/openwrt_wpa8630pv2_patched_firmware/releases/) for links to the firmware images.
+See the [releases page](https://github.com/xabolcs/openwrt_hootoo_ht-tm02_oldstable/releases) for links to the firmware images.
 
-These are built using [this Github workflow](./.github/workflows/build_release_images.yml). You can see the build logs [here](https://github.com/jwmullally/openwrt_wpa8630pv2_patched_firmware/actions?query=workflow%3ABuild-Release-Images).
+These are built using [this Github workflow](./.github/workflows/build_release_images.yml). You can see the build logs for a few days [here](https://github.com/xabolcs/openwrt_hootoo_ht-tm02_oldstable/actions?query=workflow%3ABuild-Release-Images).
 
 
 ## Installing
 
-Choose the correct file from the table above and follow the [standard installation instructions](https://openwrt.org/toh/tp-link/tl-wpa8630p_v2#oem_easy_installation).
+Create a system backup first, write file `EnterRouterMode.sh` from [here](https://forum.openwrt.org/t/hootoo-ht-tm01-how-to-flash-stock-firmware/31436/50) to a USB stick (needs not be empty), and insert it to the device while it's running. This script will create a new folder on the USB stick with copies of the device's original partitions.
 
-If you get "Wrong file" message during firmware upgrade, try renaming the file to something shorter like `openwrt-firmware.bin`.
-
-After installing, you should then sysupgrade to the corresponding official OpenWrt images and continue using those images as normal.
+After you placed the backup to a safe place choose the `kernel.bin` and `rootfs.bin` for your device and follow the [TFTP recovery installation instructions](https://openwrt.org/toh/hootoo/ht-tm01_tripmate#installation)!
 
 
 ## Building
@@ -53,4 +38,4 @@ If you want to build the firmwares yourself, checkout this repo and do the follo
 make
 ```
 
-The firmware will be located at `openwrt-imagebuilder-ath79-tiny.Linux-x86_64/bin/targets/ath79/tiny/`. To customize the firmware further (packages etc), see the ImageBuilder wiki.
+The firmware will be located at `openwrt-imagebuilder-*-ramips-rt305x.Linux-x86_64/bin/targets/ramips/rt305x/`. To customize the firmware further (packages etc), see the ImageBuilder wiki.
