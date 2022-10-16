@@ -1,4 +1,4 @@
-From 07cbfbccd5160f29e90d08f4cd02b764b2c574e1 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Szabolcs Hubai <szab.hu@gmail.com>
 Date: Fri, 13 Aug 2021 08:48:40 +0200
 Subject: [PATCH 2/2] ramips: add HooToo Tripmate HT-TM01
@@ -428,6 +428,3 @@ index a62eafec4c..3b37ab89aa 100644
  TARGET_DEVICES += ht-tm02
  
  define Device/hw550-3g
--- 
-2.25.1
-

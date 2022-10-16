@@ -1,4 +1,4 @@
-From dbe32213f3c49af9369971429465e69b465c47c9 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Szabolcs Hubai <szab.hu@gmail.com>
 Date: Sun, 22 Aug 2021 15:53:05 +0200
 Subject: [PATCH 1/2] ramips: fix HooToo HT-TM02 partitions
@@ -169,6 +169,3 @@ index 59f0cbdee6..a62eafec4c 100644
  endef
  TARGET_DEVICES += ht-tm02
  
--- 
-2.25.1
-
