@@ -1,4 +1,4 @@
-# This Makefile downloads the OpenWRT ImageBuilder and patches
+# This Makefile downloads the OpenWrt ImageBuilder and patches
 # the included tplink-safeloader to add more SupportList entries.
 # Afterwards, the ImageBuilder can be used as normal.
 #

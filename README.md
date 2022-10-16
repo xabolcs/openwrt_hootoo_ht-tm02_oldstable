@@ -1,15 +1,15 @@
 ## Overview
 
-This repository contains a simple patch to enable the [OpenWRT firmware for the TP-Link TL-WPA8630P v2](https://openwrt.org/toh/tp-link/tl-wpa8630p_v2) to be flashed to the following devices which are not officially supported.
+This repository contains a simple patch to enable the [OpenWrt firmware for the TP-Link TL-WPA8630P v2](https://openwrt.org/toh/tp-link/tl-wpa8630p_v2) to be flashed to the following devices which are not officially supported.
 
-It builds the images using the [OpenWRT ImageBuilder](https://openwrt.org/docs/guide-user/additional-software/imagebuilder). One advantage of this over from-source custom builds is that the kernel is the same as the official builds, so all kmods from the standard repos are installable.
+It builds the images using the [OpenWrt ImageBuilder](https://openwrt.org/docs/guide-user/additional-software/imagebuilder). One advantage of this over from-source custom builds is that the kernel is the same as the official builds, so all kmods from the standard repos are installable.
 
-The only difference between these firmwares and the offical firmwares is the extra model version in the firmware file's SupportList required to perform the upgrade. After installing, the device will be identical to the official OpenWRT image (i.e. `v2-int`, `v2.0-eu`, `v2.1-eu`). You can upgrade using the official sysupgrade firmwares matching the patched firmware. If you are reverting to stock later, make sure to use the exact same stock firmware version as you originally upgraded from. 
+The only difference between these firmwares and the offical firmwares is the extra model version in the firmware file's SupportList required to perform the upgrade. After installing, the device will be identical to the official OpenWrt image (i.e. `v2-int`, `v2.0-eu`, `v2.1-eu`). You can upgrade using the official sysupgrade firmwares matching the patched firmware. If you are reverting to stock later, make sure to use the exact same stock firmware version as you originally upgraded from. 
 
 
 ## Supported versions 
 
-| Hardware Version | Stock Firmware Version | Patched OpenWRT Firmware | Sysupgrade to official OpenWRT official image after install |
+| Hardware Version | Stock Firmware Version | Patched OpenWrt Firmware | Sysupgrade to official OpenWrt official image after install |
 | --- | --- | --- | --- |
 | `Model: TL-WPA8630(CA) Ver: 2.0` | All | `openwrt-patch-ath79-tiny-tplink_tl-wpa8630p-v2-int-squashfs-factory.bin` | `tplink_tl-wpa8630p-v2-int` |
 | `Model: TL-WPA8630(US) Ver: 2.0` | `2.0.1 Build 20171011 Rel.33916` | `openwrt-patch-ath79-tiny-tplink_tl-wpa8630p-v2-int-squashfs-factory.bin` | `tplink_tl-wpa8630p-v2-int` |
@@ -17,7 +17,7 @@ The only difference between these firmwares and the offical firmwares is the ext
 
 **!!! ONLY INSTALL THESE FIRMWARES IF YOUR CURRENT HARDWARE AND FIRMWARE VERSIONS EXACTLY MATCHES THE ENTRY IN THIS TABLE !!!**
 
-If your device is running a different firmware version than those listed below, installing these firmwares will prevent your device from booting and turn it into a [brick](https://en.wikipedia.org/wiki/Brick_%28electronics%29). This is because the bootloader in the newer versions of the stock firmwares load the kernal and filesystem from a different memory location. It will not be recoverable without physically opening the device (which should not be attempted as it contains hazardous 110-230V voltages) and writing directly to the flash memory chip with a flash programmer. So only install this firmware on your device if its a complete match! For support for other versions, ask in the [OpenWRT forum](https://forum.openwrt.org/).
+If your device is running a different firmware version than those listed below, installing these firmwares will prevent your device from booting and turn it into a [brick](https://en.wikipedia.org/wiki/Brick_%28electronics%29). This is because the bootloader in the newer versions of the stock firmwares load the kernal and filesystem from a different memory location. It will not be recoverable without physically opening the device (which should not be attempted as it contains hazardous 110-230V voltages) and writing directly to the flash memory chip with a flash programmer. So only install this firmware on your device if its a complete match! For support for other versions, ask in the [OpenWrt forum](https://forum.openwrt.org/).
 
 Where to find this information:
 
@@ -42,7 +42,7 @@ Choose the correct file from the table above and follow the [standard installati
 
 If you get "Wrong file" message during firmware upgrade, try renaming the file to something shorter like `openwrt-firmware.bin`.
 
-After installing, you should then sysupgrade to the corresponding official OpenWRT images and continue using those images as normal.
+After installing, you should then sysupgrade to the corresponding official OpenWrt images and continue using those images as normal.
 
 
 ## Building
