@@ -16,6 +16,7 @@ BUILDER := openwrt-imagebuilder-$(VERSION)-$(BOARD)-$(SUBTARGET).Linux-x86_64
 PROFILES := hootoo_ht-tm02
 PACKAGES := -wpad-mini -wpad-basic -wpad-basic-wolfssl wpad-mesh-wolfssl
 PACKAGES += -ppp -ppp-mod-pppoe
+PACKAGES += uboot-envtools
 EXTRA_IMAGE_NAME := stocklayout+mesh+noppp
 BASE_FILES := $(subst $(CURDIR)/,,$(wildcard $(CURDIR)/files/*))
 
