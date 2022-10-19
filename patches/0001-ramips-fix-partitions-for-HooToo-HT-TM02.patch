@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Szabolcs Hubai <szab.hu@gmail.com>
 Date: Sun, 16 Oct 2022 22:02:03 +0200
-Subject: [PATCH] ramips: fix partitions for HooToo HT-TM02
+Subject: [PATCH 1/2] ramips: fix partitions for HooToo HT-TM02
 
 to avoid overwriting unique stock partitions.
 Due to this, sysupgrade.bin recipe have to be changed,
@@ -56,11 +56,12 @@ Suggested-by: Adrian Schmutzler <freifunk@adrianschmutzler.de>
 Signed-off-by: Szabolcs Hubai <szab.hu@gmail.com>
 ---
  package/boot/uboot-envtools/files/ramips      |  1 +
- .../ramips/dts/rt5350_hootoo_ht-tm02.dts      | 45 ++++++++++++++++---
- target/linux/ramips/image/rt305x.mk           | 11 ++++-
+ .../ramips/dts/rt5350_hootoo_ht-tm02.dts      | 42 ++++++++++++++++---
+ target/linux/ramips/image/rt305x.mk           | 10 ++++-
  .../etc/uci-defaults/05_fix-compat-version    | 10 +++++
- .../rt305x/base-files/lib/upgrade/platform.sh | 36 +++++++++++++++
- 5 files changed, 96 insertions(+), 7 deletions(-)
+ .../rt305x/base-files/lib/upgrade/platform.sh | 37 ++++++++++++++++
+ target/linux/ramips/rt305x/config-5.4         |  1 +
+ 6 files changed, 95 insertions(+), 6 deletions(-)
  create mode 100644 target/linux/ramips/rt305x/base-files/etc/uci-defaults/05_fix-compat-version
 
 diff --git a/package/boot/uboot-envtools/files/ramips b/package/boot/uboot-envtools/files/ramips
@@ -76,18 +77,9 @@ index 3e358ec6ac..f295580bae 100644
  ravpower,rp-wd03)
  	idx="$(find_mtd_index u-boot-env)"
 diff --git a/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts b/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
-index 543fda74b7..36503860ab 100644
+index 543fda74b7..3fca90459a 100644
 --- a/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
 +++ b/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
-@@ -4,7 +4,7 @@
- #include <dt-bindings/input/input.h>
- 
- / {
--	compatible = "hootoo,ht-tm02", "ralink,rt5350-soc";
-+	compatible = "hootoo,ht-tm02-stock", "ralink,rt5350-soc";
- 	model = "HooToo HT-TM02";
- 
- 	aliases {
 @@ -45,6 +45,23 @@
  			linux,input-type = <EV_SW>;
  		};
@@ -130,7 +122,7 @@ index 543fda74b7..36503860ab 100644
  				reg = <0x30000 0x10000>;
  				read-only;
  			};
-@@ -79,9 +96,25 @@
+@@ -79,9 +96,24 @@
  			};
  
  			partition@50000 {
@@ -144,7 +136,6 @@ index 543fda74b7..36503860ab 100644
 +			partition@1d0000 {
 +				label = "u-boot-env";
 +				reg = <0x1d0000 0x10000>;
-+				read-only;
 +			};
 +
 +			rootfs2: partition@1e0000 {
@@ -160,15 +151,14 @@ index 543fda74b7..36503860ab 100644
  		};
  	};
 diff --git a/target/linux/ramips/image/rt305x.mk b/target/linux/ramips/image/rt305x.mk
-index 9b498fa5ab..0f174faf04 100644
+index 9b498fa5ab..f8e962b425 100644
 --- a/target/linux/ramips/image/rt305x.mk
 +++ b/target/linux/ramips/image/rt305x.mk
-@@ -600,7 +600,16 @@ define Device/hootoo_ht-tm02
+@@ -600,7 +600,15 @@ define Device/hootoo_ht-tm02
    DEVICE_VENDOR := HooToo
    DEVICE_MODEL := HT-TM02
    DEVICE_PACKAGES := kmod-usb-ohci kmod-usb2 kmod-usb-ledtrig-usbport
 -  SUPPORTED_DEVICES += ht-tm02
-+  SUPPORTED_DEVICES += hootoo,ht-tm02-stock
 +  IMAGE_SIZE := 6144k
 +  KERNEL_SIZE := 1536k
 +  IMAGES += kernel.bin rootfs.bin
@@ -198,10 +188,10 @@ index 0000000000..3995a2731c
 +
 +exit 0
 diff --git a/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh b/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
-index 786d57fc70..2138503823 100755
+index 786d57fc70..6acfb85d8a 100755
 --- a/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
-@@ -6,13 +6,49 @@ PART_NAME=firmware
+@@ -6,13 +6,50 @@ PART_NAME=firmware
  REQUIRE_IMAGE_METADATA=1
  
  platform_check_image() {
@@ -248,6 +238,19 @@ index 786d57fc70..2138503823 100755
  	case "$board" in
 +	ht-tm02)
 +		hootoo_do_upgrade "$1"
++		;;
  	*)
  		default_do_upgrade "$1"
  		;;
+diff --git a/target/linux/ramips/rt305x/config-5.4 b/target/linux/ramips/rt305x/config-5.4
+index 3f93a9db88..9321eb65fd 100644
+--- a/target/linux/ramips/rt305x/config-5.4
++++ b/target/linux/ramips/rt305x/config-5.4
+@@ -160,6 +160,7 @@ CONFIG_MTD_SPI_NOR_USE_4K_SECTORS_LIMIT=16384
+ CONFIG_MTD_SPLIT_JIMAGE_FW=y
+ CONFIG_MTD_SPLIT_SEAMA_FW=y
+ CONFIG_MTD_SPLIT_UIMAGE_FW=y
++CONFIG_MTD_VIRT_CONCAT=y
+ CONFIG_NEED_DMA_MAP_STATE=y
+ CONFIG_NEED_PER_CPU_KM=y
+ CONFIG_NET_RALINK_ESW_RT3050=y

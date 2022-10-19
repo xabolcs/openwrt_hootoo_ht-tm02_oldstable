@@ -1,0 +1,118 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Szabolcs Hubai <szab.hu@gmail.com>
+Date: Wed, 19 Oct 2022 22:49:15 +0200
+Subject: [PATCH 2/2] ramips: rt305x: revert to "user" and "userbackup"
+ partitions for HT-TM02
+
+as the mtd-concat driver wasn't enabled and needs to be backported.
+
+Without that:
+
+[    0.658311] spi spi0.0: force spi mode3
+[    0.667949] spi-nor spi0.0: mx25l6405d (8192 Kbytes)
+[    0.678147] 7 fixed-partitions partitions found on MTD device spi0.0
+[    0.690916] Creating 7 MTD partitions on "spi0.0":
+[    0.700560] 0x000000000000-0x000000030000 : "u-boot"
+[    0.713018] 0x000000030000-0x000000040000 : "config"
+[    0.725785] 0x000000040000-0x000000050000 : "factory"
+[    0.738616] 0x000000050000-0x0000001d0000 : "kernel"
+[    0.751294] 0x0000001d0000-0x0000001e0000 : "u-boot-env"
+[    0.764548] 0x0000001e0000-0x000000200000 : "rootfs2"
+[    0.777476] 0x000000200000-0x000000800000 : "rootfs1"
+[    0.819484] rt3050-esw 10110000.esw: link changed 0x00
+[    0.833815] mtk_soc_eth 10100000.ethernet eth0: mediatek frame engine at 0xb0100000, irq 5
+[    0.851658] rt2880_wdt 10000120.watchdog: Initialized
+[    0.865115] NET: Registered protocol family 10
+[    0.885967] Segment Routing with IPv6
+[    0.893730] NET: Registered protocol family 17
+[    0.902879] bridge: filtering via arp/ip/ip6tables is no longer available by default. Update your scripts to load br_netfilter if you need this.
+[    0.928832] 8021q: 802.1Q VLAN Support v1.8
+[    0.941567] /dev/root: Can't open blockdev
+[    0.949932] VFS: Cannot open root device "(null)" or unknown-block(0,0): error -6
+[    0.964926] Please append a correct "root=" boot option; here are the available partitions:
+[    0.981654] 1f00             192 mtdblock0
+[    0.981665]  (driver?)
+[    0.994816] 1f01              64 mtdblock1
+[    0.994826]  (driver?)
+[    1.007972] 1f02              64 mtdblock2
+[    1.007981]  (driver?)
+[    1.021127] 1f03            1536 mtdblock3
+[    1.021137]  (driver?)
+[    1.034319] 1f04              64 mtdblock4
+[    1.034328]  (driver?)
+[    1.047477] 1f05             128 mtdblock5
+[    1.047486]  (driver?)
+[    1.060635] 1f06            6144 mtdblock6
+[    1.060644]  (driver?)
+[    1.073789] Kernel panic - not syncing: VFS: Unable to mount root fs on unknown-block(0,0)
+[    1.090276] Rebooting in 1 seconds..
+---
+ .../ramips/dts/rt5350_hootoo_ht-tm02.dts      | 31 ++++++-------------
+ target/linux/ramips/rt305x/config-5.4         |  1 -
+ 2 files changed, 10 insertions(+), 22 deletions(-)
+
+diff --git a/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts b/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
+index 3fca90459a..1ab3d20081 100644
+--- a/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
++++ b/target/linux/ramips/dts/rt5350_hootoo_ht-tm02.dts
+@@ -45,23 +45,6 @@
+ 			linux,input-type = <EV_SW>;
+ 		};
+ 	};
+-
+-	virtual_flash {
+-		compatible = "mtd-concat";
+-
+-		devices = <&rootfs1 &rootfs2>;
+-
+-		partitions {
+-			compatible = "fixed-partitions";
+-			#address-cells = <1>;
+-			#size-cells = <1>;
+-
+-			partition@0 {
+-				label = "rootfs";
+-				reg = <0x0 0x0>;
+-			};
+-		};
+-	};
+ };
+ 
+ &spi0 {
+@@ -105,14 +88,20 @@
+ 				reg = <0x1d0000 0x10000>;
+ 			};
+ 
+-			rootfs2: partition@1e0000 {
+-				label = "rootfs2";
+-				reg = <0x1e0000 0x20000>;
++			partition@1e0000 {
++				label = "userbackup";
++				reg = <0x1e0000 0x10000>;
++				read-only;
++			};
++
++			partition@1f0000 {
++				label = "user";
++				reg = <0x1f0000 0x10000>;
+ 				read-only;
+ 			};
+ 
+ 			rootfs1: partition@200000 {
+-				label = "rootfs1";
++				label = "rootfs";
+ 				reg = <0x200000 0x600000>;
+ 			};
+ 		};
+diff --git a/target/linux/ramips/rt305x/config-5.4 b/target/linux/ramips/rt305x/config-5.4
+index 9321eb65fd..3f93a9db88 100644
+--- a/target/linux/ramips/rt305x/config-5.4
++++ b/target/linux/ramips/rt305x/config-5.4
+@@ -160,7 +160,6 @@ CONFIG_MTD_SPI_NOR_USE_4K_SECTORS_LIMIT=16384
+ CONFIG_MTD_SPLIT_JIMAGE_FW=y
+ CONFIG_MTD_SPLIT_SEAMA_FW=y
+ CONFIG_MTD_SPLIT_UIMAGE_FW=y
+-CONFIG_MTD_VIRT_CONCAT=y
+ CONFIG_NEED_DMA_MAP_STATE=y
+ CONFIG_NEED_PER_CPU_KM=y
+ CONFIG_NET_RALINK_ESW_RT3050=y
