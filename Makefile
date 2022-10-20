@@ -13,7 +13,7 @@ BOARD := ramips
 SUBTARGET := rt305x
 SOC := rt5350
 BUILDER := openwrt-imagebuilder-$(VERSION)-$(BOARD)-$(SUBTARGET).Linux-x86_64
-PROFILES := hootoo_ht-tm02
+PROFILES := hootoo_ht-tm01 hootoo_ht-tm02
 PACKAGES := -wpad-mini -wpad-basic -wpad-basic-wolfssl wpad-mesh-wolfssl
 PACKAGES += -ppp -ppp-mod-pppoe
 PACKAGES += uboot-envtools
@@ -40,6 +40,8 @@ $(BUILDER): $(BUILDER).tar.xz
 	curl $(ALL_CURL_OPTS) "https://git.openwrt.org/?p=openwrt/openwrt.git;hb=refs/tags/v$(VERSION);a=blob_plain;f=package/boot/uboot-envtools/files/ramips" -o $(BUILDER)/package/boot/uboot-envtools/files/ramips
 	mkdir $(BUILDER)/target/linux/ramips/rt305x/base-files/etc/uci-defaults
 	touch $(BUILDER)/target/linux/ramips/rt305x/base-files/etc/uci-defaults/05_fix-compat-version
+	touch $(BUILDER)/target/linux/ramips/dts/rt5350_hootoo_ht-tm01.dts
+	touch $(BUILDER)/target/linux/ramips/dts/rt5350_sunvalley_tripmate.dtsi
 
 	# Apply all patches
 	$(foreach file, $(sort $(wildcard patches/*.patch)), patch -d $(BUILDER) --posix -p1 < $(file);)

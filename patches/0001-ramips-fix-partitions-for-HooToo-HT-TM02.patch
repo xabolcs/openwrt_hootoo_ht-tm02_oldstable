@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Szabolcs Hubai <szab.hu@gmail.com>
 Date: Sun, 16 Oct 2022 22:02:03 +0200
-Subject: [PATCH 1/2] ramips: fix partitions for HooToo HT-TM02
+Subject: [PATCH 1/3] ramips: fix partitions for HooToo HT-TM02
 
 to avoid overwriting unique stock partitions.
 Due to this, sysupgrade.bin recipe have to be changed,
@@ -188,7 +188,7 @@ index 0000000000..3995a2731c
 +
 +exit 0
 diff --git a/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh b/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
-index 786d57fc70..6acfb85d8a 100755
+index 786d57fc70..fec4b6a304 100755
 --- a/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
 +++ b/target/linux/ramips/rt305x/base-files/lib/upgrade/platform.sh
 @@ -6,13 +6,50 @@ PART_NAME=firmware
@@ -196,7 +196,7 @@ index 786d57fc70..6acfb85d8a 100755
  
  platform_check_image() {
 +	case "$(board_name)" in
-+	ht-tm02)
++	*ht-tm02)
 +		local config_size=$(mtd_get_part_size config)
 +
 +		[ -n "$config_size" ] || return 0
@@ -236,7 +236,7 @@ index 786d57fc70..6acfb85d8a 100755
  	local board=$(board_name)
  
  	case "$board" in
-+	ht-tm02)
++	hootoo,ht-tm02)
 +		hootoo_do_upgrade "$1"
 +		;;
  	*)

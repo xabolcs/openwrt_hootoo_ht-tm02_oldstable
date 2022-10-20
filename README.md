@@ -13,6 +13,7 @@ And because of this, you should never ever cross upgrade between official OpenWr
 
 | Vendor | Model | Vendor Product Line | Stock firmware | Stock backup <small>from a random user</small> | OpenWrt Wiki device page |
 | --- | --- | --- | --- | --- | --- |
+| HooToo | HT-TM01 | `WiFiDGRJ` | ... | [backup-fw-WiFiDGRJ-HooToo-TM01-2.000.022-8850118661](https://drive.google.com/drive/folders/1XiEWeimv5pPtHeueD4U0fTVdcnYSKeeL?usp=sharing) | [HooToo HT-TM01 (TripMate)](https://openwrt.org/toh/hootoo/ht-tm01_tripmate) |
 | HooToo | HT-TM02 | `WiFiPort` | ... | [backup-fw-WiFiPort-HooToo-TM02-2.000.018-8850119415](https://drive.google.com/drive/folders/1PnhUEnPvaC5h0kxtm30y-SiWqHzyFvty?usp=sharing) | [HooToo HT-TM02 (TripMate Nano)](https://openwrt.org/toh/hootoo/tripmate-nano) |
 
 

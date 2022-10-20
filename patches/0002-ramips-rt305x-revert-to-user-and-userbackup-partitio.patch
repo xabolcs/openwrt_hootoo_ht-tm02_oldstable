@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Szabolcs Hubai <szab.hu@gmail.com>
 Date: Wed, 19 Oct 2022 22:49:15 +0200
-Subject: [PATCH 2/2] ramips: rt305x: revert to "user" and "userbackup"
+Subject: [PATCH 2/3] ramips: rt305x: revert to "user" and "userbackup"
  partitions for HT-TM02
 
 as the mtd-concat driver wasn't enabled and needs to be backported.
