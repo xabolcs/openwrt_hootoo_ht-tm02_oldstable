@@ -81,7 +81,7 @@ images: $(BUILDER) linux-sources base-files
 	;)
 	sleep 5
 	cat $(BUILDER)/bin/targets/$(BOARD)/$(SUBTARGET)/sha256sums
-	ls -hs $(BUILDER)/bin/targets/$(BOARD)/$(SUBTARGET)/openwrt-*.bin
+	ls -hs --block-size=K $(BUILDER)/bin/targets/$(BOARD)/$(SUBTARGET)/openwrt-*.bin
 
 
 clean:
