@@ -8,7 +8,7 @@
 
 ALL_CURL_OPTS := $(CURL_OPTS) -L --fail --create-dirs
 
-VERSION := 21.02.3
+VERSION := 21.02.7
 BOARD := ramips
 SUBTARGET := rt305x
 SOC := rt5350
